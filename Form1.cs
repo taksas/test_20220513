@@ -5,10 +5,14 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Csv;
+using AngleSharp.Html.Parser;
+using AngleSharp.Html.Dom;
 
 namespace test_20220513
 {
@@ -21,42 +25,89 @@ namespace test_20220513
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            for (int i = 1; i <= 60; i++)
+
+
+            //Cookieを有効化?
+            var config1 = Configuration.Default.WithDefaultLoader(); // WithDefaultCookies()を追加
+            var context1 = BrowsingContext.New(config1);
+            //URLを取得
+            string hi1 = "https://tabelog.com/rstLst/sushi/1/";
+            var document1 = await context1.OpenAsync(hi1);
+
+
+
+
+
+            try
             {
+
+
+
+                foreach (var item1 in document1.GetElementsByClassName("list-balloon__recommend-target"))
+                {
+                    string tdfk = item1.GetAttribute("href");
+
+                    for (int i = 1; i <= 60; i++)
+                    {
+                        //Cookieを有効化?
+                        var config = Configuration.Default.WithDefaultLoader(); // WithDefaultCookies()を追加
+                        var context = BrowsingContext.New(config);
+                        //URLを取得
+                        string hi = tdfk + i + "/";
+                        var document = await context.OpenAsync(hi);
+
+
+                        try
+                        {
+
+                            foreach (var item in document.GetElementsByClassName("list-rst__rst-name-target cpy-rst-name"))
+                            {
+                                Debug.WriteLine(item.GetAttribute("href"));
+
+                            }
+
+                        }
+                        catch (System.Exception)
+                        {
+                            throw;
+                        }
+
+                    }
+
+                }
+            }
+            catch (System.Exception)
+            {
+                throw;
+            }
+        }
+
+        // htmlパーサー
+        private static HtmlParser parser = new HtmlParser();
+
+
+        private async void button2_Click(object sender, EventArgs e)
+        {
+            foreach (string line in System.IO.File.ReadLines(@"C:\Users\Public\Documents\outfile1.txt"))
+            {
+
                 //Cookieを有効化?
                 var config = Configuration.Default.WithDefaultLoader(); // WithDefaultCookies()を追加
                 var context = BrowsingContext.New(config);
-                //URLを取得
-                string hi = "https://tabelog.com/rstLst/sushi/" + i + "/";
-                var document = await context.OpenAsync(hi);
-
-
-                //Debug.WriteLine(hi);
-                //Debug.WriteLine(document.Title);
-                Debug.WriteLine("started");
+                var document = await context.OpenAsync(line + "dtlmenu/");
+                IHtmlDocument ParserList = (IHtmlDocument)await parser.ParseDocumentAsync(document);
 
                 try
                 {
-                    //var classpList1 = document.GetElementsByClassName("list-rst__rst-name-target cpy-rst-name");
-                    // var classpList1 = document.GetElementsByClassName("dimmed_text");
-                    var classpList1 = document.QuerySelectorAll("href[class^='list-rst__rst-name-target cpy-rst-name']");
-                    //var classpList2 = document.QuerySelectorAll("div[href^='https://kadai-moodle.kagawa-u.ac.jp/course/view.php?id=']");
 
-
-                    foreach (var item in document.GetElementsByClassName("list-rst__rst-name-target cpy-rst-name"))
+                    foreach (var item in ParserList.GetElementsByClassName("rstdtl-menu-lst__contents"))
                     {
-                        Debug.WriteLine(item.GetAttribute("href"));
+
+                            Debug.WriteLine($"{item.GetAttribute("href")}こん{item.GetAttribute("href")}");
+
+
                     }
-                    /*
 
-                                        for (var j = 0; j < classpList1.Length; j++)
-                                            {
-                                                var c = classpList1[j];
-
-                                            Debug.WriteLine(c);
-
-                                        }
-                    */
                 }
                 catch (System.Exception)
                 {
