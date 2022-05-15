@@ -16,6 +16,9 @@ using AngleSharp.Dom;
 using Jitbit.Utils;
 using System.Text.RegularExpressions;
 using System.Net;
+using System.Runtime.InteropServices;
+using Numpy;
+using Aspose.Words;
 
 namespace test_20220513
 {
@@ -116,7 +119,11 @@ namespace test_20220513
                                     {
                                         foreach (string line2 in System.IO.File.ReadLines(@"C:\Users\Public\Documents\neta2.txt"))
                                         {
-                                            if (itemname.TextContent.Contains(line2.Remove(0, 2)) 
+
+                                                if (itemname.TextContent.Contains(line2.Remove(0, 2))
+
+                                                &&line2.Substring(0, 2).Replace("/", "") == "81" //Special - まぐろモード
+
                                                 && !itemname.TextContent.Contains("刺")
                                                 && !itemname.TextContent.Contains("さしみ")
                                                 && !itemname.TextContent.Contains("手作り")
@@ -169,7 +176,7 @@ namespace test_20220513
                                                 .Replace("名物", "")
                                                 .Replace("特上", "")
                                                 .Replace("上", "")
-                                                
+
 
 
 
@@ -186,21 +193,29 @@ namespace test_20220513
                                                     wc.DownloadFile(item2.GetAttribute("href"), "C:\\Users\\Public\\Documents\\sushi\\" + num++ + ".jpg");
 
                                                 }
-                                                catch (WebException exc)
+                                                catch (WebException)
                                                 {
                                                     throw;
                                                 }
-
+                                                /*
+                                                var doc = new Aspose.Words.Document();
+                                                var builder = new DocumentBuilder(doc);
+                                                var shape = builder.InsertImage("C:\\Users\\Public\\Documents\\sushi\\" + num + ".jpg");
+                                                shape.ImageData.Save("C:\\Users\\Public\\Documents\\sushi\\" + num + ".png");
+                                                */
+                                                //var imgArray = LoadImage("C:\\Users\\Public\\Documents\\sushi\\" + num++ + ".jpg");
 
                                                 Debug.WriteLine($"{item2.GetAttribute("href")}／{num}／{itemname.TextContent}／{line2.Substring(0, 2).Replace("/", "")}／{itempricestr}");
 
+
                                                 myExport.AddRow();
-                                                myExport["imageurl"] = num;
-                                                myExport["name"] = itemname.TextContent;
-                                                myExport["num"] = line2.Substring(0, 2).Replace("/", "");
+                                                myExport["imageurl"] = item2.GetAttribute("href");
+                                                //myExport["name"] = itemname.TextContent;
+                                               // myExport["num"] = line2.Substring(0, 2).Replace("/", "");
                                                 myExport["price"] = itempricestr;
 
                                                 break;
+                                            
                                             }
                                         }
                                     }
@@ -221,7 +236,52 @@ namespace test_20220513
                 }
                 File.WriteAllBytes("C:\\Users\\Public\\Documents\\traindata1.csv", myExport.ExportToBytes());
             }
+
+
             
+        }
+        /// <summary>
+        /// Bitmapをbyte[]に変換する
+        /// </summary>
+        /// <param name="bitmap">変換元の32bitARGB Bitmap</param>
+        /// <returns>1 pixel = 4 byte (+3:A, +2:R, +1:G, +0:B) に変換したbyte配列</returns>
+        public static byte[] BitmapToByteArray(Bitmap bmp)
+        {
+            Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+            System.Drawing.Imaging.BitmapData bmpData =
+                bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            // Bitmapの先頭アドレスを取得
+            IntPtr ptr = bmpData.Scan0;
+
+            // 32bppArgbフォーマットで値を格納
+            int bytes = bmp.Width * bmp.Height * 4;
+            byte[] rgbValues = new byte[bytes];
+
+            // Bitmapをbyte[]へコピー
+            Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+            bmp.UnlockBits(bmpData);
+            return rgbValues;
+        }
+
+        /// <summary>
+        /// 画像ファイルを読み込んで3ランクのNumPy配列に変換
+        /// </summary>
+        /// <param name="filename">画像ファイルのパス</param>
+        /// <returns>(H, W, 3)からなるuint8型のNumPy配列</returns>
+        public static NDarray LoadImage(string filename)
+        {
+            NDarray imgArray;
+            using (var img = new Bitmap(filename))
+            {
+                // 1次元ベクトル(B, G, R, A)が左上→右上、左下……と並ぶ
+                imgArray = np.array(BitmapToByteArray(img), dtype: np.uint8);
+                imgArray = imgArray.reshape(img.Height, img.Width, 4);
+                imgArray = imgArray[":, :, :3"][":, :, ::- 1"]; // スライスは文字列で囲む
+            }
+            return imgArray;
         }
 
     }
