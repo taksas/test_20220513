@@ -105,6 +105,12 @@ namespace test_20220513
                 var context = BrowsingContext.New(config);
                 var document = await context.OpenAsync(line + "dtlmenu/");
 
+
+
+                int label[100][2] = {0};
+                int pricerange = 0;
+
+
                 try
                 {
 
@@ -122,7 +128,7 @@ namespace test_20220513
 
                                                 if (itemname.TextContent.Contains(line2.Remove(0, 2))
 
-                                                &&line2.Substring(0, 2).Replace("/", "") == "81" //Special - まぐろモード
+                                                
 
                                                 && !itemname.TextContent.Contains("刺")
                                                 && !itemname.TextContent.Contains("さしみ")
@@ -184,13 +190,15 @@ namespace test_20220513
 
                                                 )
                                             {
-
+                                                
+                                                var sushilabel = line2.Substring(0, 2).Replace("/", "");
                                                 string itempricestr = Regex.Replace(itemprice.TextContent, @"[^0-9]", "");
+                                                if ( Int32.Parse(itempricestr) >= 1000) { pricerange = 1; } else { pricerange = 0; }
 
                                                 WebClient wc = new WebClient();
                                                 try
                                                 {
-                                                    wc.DownloadFile(item2.GetAttribute("href"), "C:\\Users\\Public\\Documents\\sushi\\" + num++ + ".jpg");
+                                                    wc.DownloadFile(item2.GetAttribute("href"), "C:\\Users\\Public\\Documents\\sushi\\" + sushilabel + "\\" + pricerange + "\\" + label[sushilabel][pricerange]++ + ".jpg");
 
                                                 }
                                                 catch (WebException)
@@ -211,7 +219,7 @@ namespace test_20220513
                                                 myExport.AddRow();
                                                 myExport["imageurl"] = item2.GetAttribute("href");
                                                 //myExport["name"] = itemname.TextContent;
-                                               // myExport["num"] = line2.Substring(0, 2).Replace("/", "");
+                                               // myExport["label"] = sushilabel;
                                                 myExport["price"] = itempricestr;
 
                                                 break;
