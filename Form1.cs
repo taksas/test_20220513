@@ -17,8 +17,7 @@ using Jitbit.Utils;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Runtime.InteropServices;
-using Numpy;
-using Aspose.Words;
+
 
 namespace test_20220513
 {
@@ -95,7 +94,10 @@ namespace test_20220513
         private async void button2_Click(object sender, EventArgs e)
         {
             var myExport = new CsvExport();
-            int num = 0;
+
+            int[,] label = new int[100, 2];
+            int pricerange = 0;
+
 
             foreach (string line in System.IO.File.ReadLines(@"C:\Users\Public\Documents\outfile2.txt"))  //店舗URL設定
             {
@@ -107,8 +109,7 @@ namespace test_20220513
 
 
 
-                int label[100][2] = {0};
-                int pricerange = 0;
+                
 
 
                 try
@@ -123,7 +124,7 @@ namespace test_20220513
                                 foreach (var itemname in item.GetElementsByClassName("rstdtl-menu-lst__menu-title")) {  
                                     foreach (var itemprice in item.GetElementsByClassName("rstdtl-menu-lst__price"))
                                     {
-                                        foreach (string line2 in System.IO.File.ReadLines(@"C:\Users\Public\Documents\neta2.txt"))
+                                        foreach (string line2 in System.IO.File.ReadLines(@"C:\Users\Public\Documents\neta3.txt"))
                                         {
 
                                                 if (itemname.TextContent.Contains(line2.Remove(0, 2))
@@ -158,6 +159,12 @@ namespace test_20220513
                                                 && !itemname.TextContent.Contains("のせ")
                                                 && !itemname.TextContent.Contains("げそ")
                                                 && !itemname.TextContent.Contains("ゲソ")
+                                                && !itemname.TextContent.Contains("「")
+                                                && !itemname.TextContent.Contains("」")
+                                                && !itemname.TextContent.Contains("『")
+                                                && !itemname.TextContent.Contains("』")
+                                                && !itemname.TextContent.Contains("【")
+                                                && !itemname.TextContent.Contains("】")
 
                                                 && itemname.TextContent
 
@@ -193,12 +200,23 @@ namespace test_20220513
                                                 
                                                 var sushilabel = line2.Substring(0, 2).Replace("/", "");
                                                 string itempricestr = Regex.Replace(itemprice.TextContent, @"[^0-9]", "");
-                                                if ( Int32.Parse(itempricestr) >= 1000) { pricerange = 1; } else { pricerange = 0; }
+
+                                                if ( Int32.Parse(itempricestr) >= 1000) 
+                                                { 
+                                                    pricerange = 1; 
+                                                } else {
+                                                    pricerange = 0; 
+                                                }
+
+
+                                                DirectoryInfo di = new DirectoryInfo($"{"C:\\Users\\Public\\Documents\\sushi\\" + sushilabel.ToString() + "\\" + pricerange.ToString() }");
+                                                di.Create();
+
 
                                                 WebClient wc = new WebClient();
                                                 try
                                                 {
-                                                    wc.DownloadFile(item2.GetAttribute("href"), "C:\\Users\\Public\\Documents\\sushi\\" + sushilabel + "\\" + pricerange + "\\" + label[sushilabel][pricerange]++ + ".jpg");
+                                                    wc.DownloadFile(item2.GetAttribute("href"), $"{"C:\\Users\\Public\\Documents\\sushi\\" + sushilabel.ToString() + "\\" + pricerange.ToString() + "\\" + label[Int32.Parse(sushilabel), pricerange].ToString() + ".jpg"}");
 
                                                 }
                                                 catch (WebException)
@@ -213,13 +231,13 @@ namespace test_20220513
                                                 */
                                                 //var imgArray = LoadImage("C:\\Users\\Public\\Documents\\sushi\\" + num++ + ".jpg");
 
-                                                Debug.WriteLine($"{item2.GetAttribute("href")}／{num}／{itemname.TextContent}／{line2.Substring(0, 2).Replace("/", "")}／{itempricestr}");
+                                                Debug.WriteLine($"{sushilabel + "\\" + pricerange + "\\" + label[Int32.Parse(sushilabel), pricerange] + ".jpg"}／{itemname.TextContent}／{sushilabel}／{itempricestr}");
 
 
                                                 myExport.AddRow();
-                                                myExport["imageurl"] = item2.GetAttribute("href");
-                                                //myExport["name"] = itemname.TextContent;
-                                               // myExport["label"] = sushilabel;
+                                                myExport["imagehere"] = sushilabel + "\\" + pricerange + "\\" + label[Int32.Parse(sushilabel), pricerange]++ + ".jpg";
+                                                myExport["name"] = itemname.TextContent;
+                                                myExport["label"] = sushilabel;
                                                 myExport["price"] = itempricestr;
 
                                                 break;
@@ -247,49 +265,6 @@ namespace test_20220513
 
 
             
-        }
-        /// <summary>
-        /// Bitmapをbyte[]に変換する
-        /// </summary>
-        /// <param name="bitmap">変換元の32bitARGB Bitmap</param>
-        /// <returns>1 pixel = 4 byte (+3:A, +2:R, +1:G, +0:B) に変換したbyte配列</returns>
-        public static byte[] BitmapToByteArray(Bitmap bmp)
-        {
-            Rectangle rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
-            System.Drawing.Imaging.BitmapData bmpData =
-                bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-            // Bitmapの先頭アドレスを取得
-            IntPtr ptr = bmpData.Scan0;
-
-            // 32bppArgbフォーマットで値を格納
-            int bytes = bmp.Width * bmp.Height * 4;
-            byte[] rgbValues = new byte[bytes];
-
-            // Bitmapをbyte[]へコピー
-            Marshal.Copy(ptr, rgbValues, 0, bytes);
-
-            bmp.UnlockBits(bmpData);
-            return rgbValues;
-        }
-
-        /// <summary>
-        /// 画像ファイルを読み込んで3ランクのNumPy配列に変換
-        /// </summary>
-        /// <param name="filename">画像ファイルのパス</param>
-        /// <returns>(H, W, 3)からなるuint8型のNumPy配列</returns>
-        public static NDarray LoadImage(string filename)
-        {
-            NDarray imgArray;
-            using (var img = new Bitmap(filename))
-            {
-                // 1次元ベクトル(B, G, R, A)が左上→右上、左下……と並ぶ
-                imgArray = np.array(BitmapToByteArray(img), dtype: np.uint8);
-                imgArray = imgArray.reshape(img.Height, img.Width, 4);
-                imgArray = imgArray[":, :, :3"][":, :, ::- 1"]; // スライスは文字列で囲む
-            }
-            return imgArray;
         }
 
     }
